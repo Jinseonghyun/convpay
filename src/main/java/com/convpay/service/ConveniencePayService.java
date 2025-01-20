@@ -1,18 +1,27 @@
 package com.convpay.service;
 
 import com.convpay.dto.*;
-import com.convpay.type.MoneyUseCancelResult;
-import com.convpay.type.MoneyUseResult;
-import com.convpay.type.PayCancelResult;
-import com.convpay.type.PayResult;
+import com.convpay.type.*;
 
 public class ConveniencePayService {
 
     private final MoneyAdapter moneyAdapter = new MoneyAdapter();
+    private final CardAdapter cardAdapter = new CardAdapter();
 
     public PayResponse pay(PayRequest payRequest) {
-        MoneyUseResult moneyUseResult =
-                moneyAdapter.use(payRequest.getPayAmount());
+        CardUseResult cardUseResult;
+        MoneyUseResult moneyUseResult;
+
+        if (payRequest.getPayMethodType() == PayMethodType.CARD) {
+            cardAdapter.authorization();
+            cardAdapter.approval();
+            cardUseResult = cardAdapter.capture(payRequest.getPayAmount());
+
+        } else {
+            moneyUseResult =
+                    moneyAdapter.use(payRequest.getPayAmount());
+        }
+
 
         // fail fast  (if else 보다 많이 사용된다.)
 
@@ -26,7 +35,7 @@ public class ConveniencePayService {
 
         // Success Case(Only one
 
-        if (moneyUseResult == MoneyUseResult.USE_FAIL) {
+        if (cardUseResult == CardUseResult.USE_FAIL || moneyUseResult == MoneyUseResult.USE_FAIL) {
             return new PayResponse(PayResult.FAIL, 0);
         }
 
